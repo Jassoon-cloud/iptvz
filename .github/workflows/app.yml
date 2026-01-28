@@ -28,7 +28,7 @@ jobs:
           pip install -r requirements.txt
           echo "✅ requests依赖安装完成，版本：$(pip show requests | grep Version | cut -d ' ' -f 2)"
 
-      # 步骤4：运行zubo.py，生成电信.txt等中间文件（不推送）
+      # 步骤4：运行zubo.py，生成电信.txt等中间文件（无任何时间限制！）
       - name: 第一步 运行zubo.py 获取组播源
         run: |
           cd $GITHUB_WORKSPACE
@@ -37,9 +37,7 @@ jobs:
           echo "====================================="
           echo "🚀 开始运行zubo.py，生成电信.txt等中间文件"
           echo "====================================="
-          # 10分钟超时 + 强制实时日志，避免海外环境卡住/无输出
-          timeout 10m python -u ./zubo.py
-        timeout-minutes: 12  # 步骤级双重超时保护
+          python -u ./zubo.py  # 仅保留-u实时日志，无任何超时限制，扫完自动继续
 
       # 步骤5：从仓库Release下载FFmpeg并解压（DL.py断流检测必备）
       - name: 下载并解压FFmpeg（DL.py依赖）
@@ -54,7 +52,7 @@ jobs:
           echo "🚀 开始从Release下载FFmpeg：$FFMPEG_FILE"
           echo "====================================="
           # 下载FFmpeg压缩包到仓库根目录
-          wget --no-verbose -O $FFMPEG_FILE https://github.com/$REPO_URL/releases https://github.com/$REPO_URL/releases/download/$RELEASE_TAG/$FFMPEG_FILE
+          wget --no-verbose -O $FFMPEG_FILE https://github.com/$REPO_URL/releases/download/$RELEASE_TAG/$FFMPEG_FILE
           
           echo "✅ FFmpeg下载完成，开始解压.tar.xz格式..."
           tar -Jxf $FFMPEG_FILE
@@ -114,6 +112,8 @@ jobs:
           # 配置Git提交用户信息
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          # 推送前自动拉取远程更新，解决冲突（新增！适配自动化）
+          git pull origin main --rebase --autostash
           # 仅添加TV.txt，精准推送，其余中间文件不提交
           git add TV.txt
           # 判断是否有文件更改，无更改则跳过提交（避免空提交报错）
