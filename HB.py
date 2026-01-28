@@ -12,7 +12,7 @@ SOURCE_FILES = [
     # "组播_江苏电信.txt",
     # "组播_重庆联通.txt",
     "组播_上海电信.txt",
-    # "组播_重庆电信.txt"
+    "组播_重庆电信.txt"
 ]
 # 输出文件名：直接生成在仓库根目录iptvz下
 OUTPUT_FILE = "HB.txt"
