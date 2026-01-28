@@ -167,14 +167,14 @@ def main():
     # ========== 核心配置：无iptv文件夹，所有文件都在仓库根目录iptvz ==========
     # 自动获取脚本所在的仓库根目录（iptvz），无需手动修改
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    # 输入文件：仓库根目录下的HB.txt（和脚本同目录）
-    INPUT_FILE = os.path.join(BASE_DIR, "HB.txt")
+    # 输入文件：仓库根目录下的DL.txt（和脚本同目录）
+    INPUT_FILE = os.path.join(BASE_DIR, "DL.txt")
     # 输出文件：直接生成在仓库根目录下的TV.txt（无iptv子文件夹）
     OUTPUT_FILE = os.path.join(BASE_DIR, "TV.txt")
     # Linux文件权限设置
     FILE_MODE = 0o644
 
-    # 读取输入文件（仓库根目录的HB.txt，兼容UTF-8/GBK，完善容错提示）
+    # 读取输入文件（仓库根目录的DL.txt，兼容UTF-8/GBK，完善容错提示）
     try:
         with open(INPUT_FILE, 'r', encoding='utf-8') as f:
             # 读取并过滤空行
@@ -182,7 +182,7 @@ def main():
         print(f"✅ 成功读取输入文件：{INPUT_FILE}（UTF-8编码）")
     except FileNotFoundError:
         print(f"❌ 错误：未找到输入文件 → {INPUT_FILE}")
-        print(f"   请确保HB.txt文件放在【仓库根目录iptvz】下（和本脚本同目录）！")
+        print(f"   请确保DL.txt文件放在【仓库根目录iptvz】下（和本脚本同目录）！")
         return
     except UnicodeDecodeError:
         # 兼容GBK编码（Windows上传文件常见，自动转换处理）
@@ -192,7 +192,7 @@ def main():
             print(f"⚠️  输入文件 {INPUT_FILE} 为GBK编码，已自动转换为UTF-8处理")
         except Exception as e:
             print(f"❌ 读取文件失败（编码不兼容）：{str(e)}")
-            print(f"   建议将HB.txt转换为UTF-8编码后重新上传！")
+            print(f"   建议将DL.txt转换为UTF-8编码后重新上传！")
             return
     except PermissionError:
         print(f"❌ 错误：读取 {INPUT_FILE} 权限不足！")
