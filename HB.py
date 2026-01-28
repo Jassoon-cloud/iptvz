@@ -5,9 +5,8 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 要合并的文件列表（直接放在仓库根目录的源文件）
 SOURCE_FILES = [
-    # "GM.txt",
-    # "组播_湖北电信.txt",
-    # "组播_湖南电信.txt",
+    "组播_湖北电信.txt",
+    "组播_湖南电信.txt",
     # "组播_江西电信.txt",
     # "组播_江苏电信.txt",
     # "组播_重庆联通.txt",
