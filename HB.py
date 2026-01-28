@@ -2,7 +2,7 @@ import os
 
 # ==================== 配置项（可根据需要调整） ====================
 # 脚本工作根目录（Ubuntu下固定为/root/iptv）
-BASE_DIR = "/root/iptv"
+BASE_DIR = "./iptv"
 # 要合并的文件列表（按你指定的顺序）
 SOURCE_FILES = [
 #    "GM.txt",
