@@ -1,0 +1,24 @@
+name: 一键联动运行 HB.py → 断流检测 → PX.py
+on:
+  workflow_dispatch:  # 手动触发
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 克隆仓库到云端
+        uses: actions/checkout@v4
+
+      - name: 配置Python环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 第一步：运行HB.py，生成HB.txt
+        run: python HB.py
+
+      - name: 第二步：运行断流检测脚本，生成DL.txt
+        run: python 你的断流检测脚本名.py  # 替换为你实际的脚本文件名
+
+      - name: 第三步：运行PX.py，读取DL.txt
+        run: python PX.py
