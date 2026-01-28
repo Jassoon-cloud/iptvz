@@ -1,8 +1,8 @@
 import os
 
-# ==================== 配置项（适配仓库根目录iptvz，源文件同目录，输出到iptv文件夹） ====================
-# 脚本工作根目录（仓库根目录，HB.py所在的目录，即iptvz）
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # 自动获取脚本所在的仓库根目录，无需手动改
+# ==================== 配置项（适配仓库根目录iptvz，无iptv子文件夹） ====================
+# 自动获取脚本所在的仓库根目录（iptvz），无需手动修改
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # 要合并的文件列表（直接放在仓库根目录的源文件）
 SOURCE_FILES = [
     # "GM.txt",
@@ -14,23 +14,15 @@ SOURCE_FILES = [
     "组播_上海电信.txt",
     "组播_重庆电信.txt"
 ]
-# 输出文件目录（仓库根目录下的iptv文件夹，存放最终的HB.txt）
-OUTPUT_DIR = os.path.join(BASE_DIR, "iptv")
-# 输出文件名
+# 输出文件名：直接生成在仓库根目录iptvz下
 OUTPUT_FILE = "HB.txt"
-# 文件编码（确保和原文件一致）
+# 文件编码（确保和原文件一致，兼容UTF-8/GBK）
 FILE_ENCODING = "utf-8"
-# Linux文件权限设置（八进制）
+# Linux文件权限设置
 FILE_MODE = 0o644
-DIR_MODE = 0o755
 
 def merge_multicast_files():
-    """合并仓库根目录的组播文件，输出到./iptv/HB.txt（适配仓库结构，无权限问题）"""
-    # 确保输出目录存在（仓库根目录/iptv）
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR, mode=DIR_MODE)
-        print(f"⚠️  输出目录 {OUTPUT_DIR} 不存在，已自动创建")
-    
+    """合并仓库根目录的组播文件，直接输出HB.txt到仓库根目录（无iptv子文件夹）"""
     # 存储所有内容（去重）
     all_content = set()
     # 记录处理的文件
@@ -40,13 +32,13 @@ def merge_multicast_files():
 
     print("开始合并组播文件...")
     print("=" * 50)
-    print(f"🔧 源文件目录：{BASE_DIR}（仓库根目录）")
-    print(f"🔧 输出文件：{os.path.join(OUTPUT_DIR, OUTPUT_FILE)}")
+    print(f"🔧 仓库根目录：{BASE_DIR}")
+    print(f"🔧 输出文件：{os.path.join(BASE_DIR, OUTPUT_FILE)}（直接生成在根目录）")
     print("=" * 50)
 
     # 遍历所有源文件（读取仓库根目录的文件）
     for file_name in SOURCE_FILES:
-        file_path = os.path.join(BASE_DIR, file_name)  # 源文件路径=仓库根目录+文件名
+        file_path = os.path.join(BASE_DIR, file_name)  # 源文件=仓库根目录+文件名
         if os.path.exists(file_path):
             print(f"正在读取：{file_path}")
             try:
@@ -74,12 +66,12 @@ def merge_multicast_files():
                 print(f"❌ 读取{file_path}失败：{str(e)}")
         else:
             missing_files.append(file_name)
-            print(f"⚠️  文件不存在：{file_path}（请检查是否放在仓库根目录）")
+            print(f"⚠️  文件不存在：{file_path}（请检查是否放在仓库根目录iptvz下）")
 
     print("=" * 50)
 
-    # 输出文件的完整路径（仓库根目录/iptv/HB.txt）
-    output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
+    # 输出文件的完整路径：直接在仓库根目录下
+    output_path = os.path.join(BASE_DIR, OUTPUT_FILE)
     
     # 写入合并后的内容
     if all_content:
@@ -89,7 +81,7 @@ def merge_multicast_files():
                 f.write("\n".join(sorted_content))
             os.chmod(output_path, FILE_MODE)
             # 打印成功统计信息
-            print(f"✅ 合并完成！最终输出：{output_path}")
+            print(f"✅ 合并完成！HB.txt直接生成在仓库根目录：{output_path}")
             print(f"📊 合并统计：")
             print(f"   - 成功处理源文件：{len(processed_files)} 个")
             print(f"   - 缺失源文件：{len(missing_files)} 个")
@@ -97,7 +89,7 @@ def merge_multicast_files():
             print(f"   - 输出文件权限：{oct(os.stat(output_path).st_mode)[-3:]}")
         except PermissionError:
             print(f"❌ 写入{output_path}失败：权限不足")
-            print(f"   解决方案：执行 chmod {oct(DIR_MODE)[2:]} {OUTPUT_DIR}")
+            print(f"   解决方案：执行 chmod 755 {BASE_DIR}")
         except Exception as e:
             print(f"❌ 写入{output_path}失败：{str(e)}")
     else:
@@ -107,17 +99,17 @@ def merge_multicast_files():
             with open(output_path, "w", encoding=FILE_ENCODING) as f:
                 f.write("")
             os.chmod(output_path, FILE_MODE)
-            print(f"ℹ️  已在输出目录创建空文件：{output_path}")
+            print(f"ℹ️  已在仓库根目录创建空文件：{output_path}")
         except Exception as e:
             print(f"❌ 创建空文件失败：{str(e)}")
 
     # 打印缺失文件列表（方便排查）
     if missing_files:
-        print("\n⚠️  缺失的源文件列表（请放到仓库根目录）：")
+        print("\n⚠️  缺失的源文件列表（请放到仓库根目录iptvz下）：")
         for file in missing_files:
             print(f"   - {file}")
 
 if __name__ == "__main__":
-    # 移除root用户检查（仓库目录非/root，普通用户可正常运行，适配GitHub Actions）
+    # 直接运行，无root检查、无文件夹创建，极简逻辑
     merge_multicast_files()
-    print("\n📌 组播文件合并任务全部完成！")
+    print("\n📌 组播文件合并任务全部完成！HB.txt在仓库根目录iptvz下")
