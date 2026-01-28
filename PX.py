@@ -164,28 +164,20 @@ def classify_and_sort_channels(channels):
     return final_result
 
 def main():
-    # ========== 核心修改：适配仓库根目录iptvz，分离输入/输出目录 ==========
+    # ========== 核心配置：无iptv文件夹，所有文件都在仓库根目录iptvz ==========
     # 自动获取脚本所在的仓库根目录（iptvz），无需手动修改
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    # 输出目录：仓库根目录下的iptv文件夹（存放最终的TV.txt）
-    OUTPUT_DIR = os.path.join(BASE_DIR, "iptv")
     # 输入文件：仓库根目录下的GG.txt（和脚本同目录）
     INPUT_FILE = os.path.join(BASE_DIR, "GG.txt")
-    # 输出文件：仓库根目录/iptv/TV.txt（输出到专属文件夹，不污染根目录）
-    OUTPUT_FILE = os.path.join(OUTPUT_DIR, "TV.txt")
-    # Linux文件权限设置（和HB.py保持一致）
+    # 输出文件：直接生成在仓库根目录下的TV.txt（无iptv子文件夹）
+    OUTPUT_FILE = os.path.join(BASE_DIR, "TV.txt")
+    # Linux文件权限设置
     FILE_MODE = 0o644
-    DIR_MODE = 0o755
-
-    # 确保输出目录存在（仓库根目录/iptv），普通用户可创建
-    if not os.path.exists(OUTPUT_DIR):
-        os.makedirs(OUTPUT_DIR, mode=DIR_MODE)
-        print(f"⚠️  输出目录 {OUTPUT_DIR} 不存在，已自动创建")
 
     # 读取输入文件（仓库根目录的GG.txt，兼容UTF-8/GBK，完善容错提示）
     try:
         with open(INPUT_FILE, 'r', encoding='utf-8') as f:
-            # 读取并过滤空行（保留原有逻辑）
+            # 读取并过滤空行
             channels = [line.strip() for line in f.readlines()]
         print(f"✅ 成功读取输入文件：{INPUT_FILE}（UTF-8编码）")
     except FileNotFoundError:
@@ -204,13 +196,13 @@ def main():
             return
     except PermissionError:
         print(f"❌ 错误：读取 {INPUT_FILE} 权限不足！")
-        print(f"   解决方案：在仓库/服务器执行 → chmod {oct(FILE_MODE)[2:]} {INPUT_FILE}")
+        print(f"   解决方案：执行 → chmod {oct(FILE_MODE)[2:]} {INPUT_FILE}")
         return
     except Exception as e:
         print(f"❌ 读取输入文件失败：{str(e)}")
         return
 
-    # 过滤无效行（空行、N/A,N/A），保留原有逻辑
+    # 过滤无效行（空行、N/A,N/A），统计过滤数量
     original_count = len(channels)
     channels = [channel for channel in channels if channel and channel != "N/A,N/A"]
     filter_count = original_count - len(channels)
@@ -222,11 +214,11 @@ def main():
         print(f"❌ 错误：输入文件 {INPUT_FILE} 中无有效频道数据！")
         return
 
-    # 核心逻辑：分类并排序频道（完全保留原有排序规则，不做任何修改）
+    # 核心逻辑：分类并排序频道（完全保留原有排序规则）
     print(f"🚀 开始对 {len(channels)} 条频道数据进行分类排序...")
     final_channels = classify_and_sort_channels(channels)
 
-    # 将排序结果写入输出文件（设置权限，适配普通用户）
+    # 将排序结果写入仓库根目录的TV.txt
     try:
         with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             for line in final_channels:
@@ -234,8 +226,8 @@ def main():
         # 设置输出文件权限，方便后续读取/使用
         os.chmod(OUTPUT_FILE, FILE_MODE)
         
-        # 打印成功结果+详细统计（保留原有统计，优化提示格式）
-        print(f"✅ 频道分类排序完成！")
+        # 打印成功结果+详细统计（排版优化）
+        print(f"✅ 频道分类排序完成！TV.txt直接生成在仓库根目录：{OUTPUT_FILE}")
         print(f"=" * 50)
         print(f"📥 输入文件：{INPUT_FILE}（有效数据：{len(channels)} 条）")
         print(f"📤 输出文件：{OUTPUT_FILE}（最终数据：{len(final_channels)} 行）")
@@ -258,7 +250,7 @@ def main():
         print(f"=" * 50)
     except PermissionError:
         print(f"❌ 错误：写入 {OUTPUT_FILE} 权限不足！")
-        print(f"   解决方案：执行 → chmod {oct(DIR_MODE)[2:]} {OUTPUT_DIR}")
+        print(f"   解决方案：执行 → chmod 755 {BASE_DIR}")
         return
     except Exception as e:
         print(f"❌ 写入输出文件失败：{str(e)}")
