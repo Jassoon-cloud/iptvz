@@ -166,10 +166,10 @@ def classify_and_sort_channels(channels):
 def main():
     # ========== 核心修改：指定/root/iptv绝对路径 ==========
     # 固定脚本运行的根目录（/root/iptv）
-    base_dir = "/root/iptv"
-    # 输入文件：/root/iptv/GG.txt
+    base_dir = "./iptv"
+    # 输入文件：./iptv/GG.txt
     input_file = os.path.join(base_dir, "GG.txt")
-    # 输出文件：/root/iptv/TV.txt
+    # 输出文件：./iptv/TV.txt
     output_file = os.path.join(base_dir, "TV.txt")
 
     # Linux下确保目录存在（防止/root/iptv被误删）
