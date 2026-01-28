@@ -1,4 +1,4 @@
-name: 全自动组播处理 - zubo→HB→DL→PX→推送TV.txt
+name: app
 # 触发方式：定时（UTC23点、6点）+ 手动触发（Actions页面点击运行）
 on:
   schedule:
