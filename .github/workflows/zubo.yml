@@ -25,13 +25,11 @@ jobs:
           pip install --upgrade pip  # 新增：升级pip，避免安装警告
           pip install -r requirements.txt
 
-      - name: 获取组播源（核心修复：实时日志+10分钟超时）
+      - name: 获取组播源（仅保留实时日志，移除所有时间限制）
         run: |
           cd $GITHUB_WORKSPACE
-          # 核心1：timeout 10m 限制脚本运行10分钟，超时自动终止
-          # 核心2：python -u 强制实时输出日志，解决海外缓冲无输出问题
-          timeout 10m python -u ./zubo.py
-        timeout-minutes: 12  # 步骤级双重超时保护，防止timeout命令失效
+          # 仅保留python -u 强制实时日志，无任何超时限制，扫描完自动结束
+          python -u ./zubo.py
 
       - name: 更新组播源（修复：移除冗余git pull，加空提交判断）
         run: |
