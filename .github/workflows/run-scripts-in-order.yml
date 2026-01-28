@@ -34,16 +34,22 @@ jobs:
           # 下载命令：从GitHub Release下载压缩包到仓库根目录
           wget --no-verbose -O $FFMPEG_FILE https://github.com/$REPO_URL/releases/download/$RELEASE_TAG/$FFMPEG_FILE
           
-          echo "✅ FFmpeg下载完成，开始解压到仓库根目录..."
-          # 适配tar.gz格式（推荐），如果用zip则替换为：unzip -q $FFMPEG_FILE -d .
-          tar -zxf $FFMPEG_FILE -C .
+          echo "✅ FFmpeg下载完成，开始解压(.tar.xz格式)..."
+          # 关键修改：适配.tar.xz的解压命令 + 重命名为纯ffmpeg文件夹
+          # 1. tar -Jxf 解压.tar.xz格式（-J是xz解压参数，-x解压，-f指定文件）
+          # 2. 解压后会生成原文件夹（如ffmpeg-master-latest-linux64-lgpl），直接重命名为ffmpeg
+          tar -Jxf $FFMPEG_FILE
+          # 自动获取解压后的原文件夹名（适配任意命名的压缩包，无需手动改）
+          FFMPEG_OLD_DIR=$(tar -tf $FFMPEG_FILE | head -1 | cut -d '/' -f 1)
+          # 重命名为纯ffmpeg文件夹（核心！匹配DL.py的路径）
+          mv $FFMPEG_OLD_DIR ffmpeg
           
-          # 验证解压结果：检查是否生成ffmpeg/bin/ffprobe
+          # 验证解压结果：必须存在ffmpeg/bin/ffprobe
           if [ -f "./ffmpeg/bin/ffprobe" ] && [ -f "./ffmpeg/bin/ffmpeg" ]; then
-            echo "✅ FFmpeg解压成功，路径：./ffmpeg/"
+            echo "✅ FFmpeg解压+重命名成功，最终路径：./ffmpeg/"
           else
-            echo "❌ FFmpeg解压失败，未找到./ffmpeg/bin/ffprobe"
-            exit 1  # 解压失败，终止后续步骤
+            echo "❌ FFmpeg解压失败，未找到核心文件！"
+            exit 1
           fi
 
       # 步骤4：给FFmpeg/ffprobe添加可执行权限（关键，避免DL.py运行报错）
