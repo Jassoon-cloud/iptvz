@@ -17,7 +17,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       # 步骤3：从Release下载FFmpeg压缩包并解压到仓库根目录
       - name: 从Release下载并解压FFmpeg
