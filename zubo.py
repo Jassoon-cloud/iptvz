@@ -6,6 +6,13 @@ import glob
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+# ==================== 核心适配：绑定仓库根目录，所有路径自动拼接 ====================
+# 自动获取脚本所在的仓库根目录（iptvz），跨环境兼容（本地/云端/GitHub Actions）
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# 所有子目录（ip/template）、文件都基于仓库根目录创建，无需手动改路径
+IP_DIR = os.path.join(BASE_DIR, "ip")
+TEMPLATE_DIR = os.path.join(BASE_DIR, "template")
+
 # ==================== 移除全局变量，改为每次扫描时动态创建 ====================
 def read_config(config_file):
     print(f"读取设置文件：{config_file}")
@@ -178,86 +185,78 @@ def multicast_province(config_file):
         all_ip_ports = sorted(set(all_ip_ports))
         print(f"\n{province} 扫描完成，获取有效ip_port共：{len(all_ip_ports)}个\n{all_ip_ports}\n")
         
-        if not os.path.exists('ip'):
-            os.makedirs('ip', mode=0o755)
+        # 基于仓库根目录创建ip目录，适配权限
+        if not os.path.exists(IP_DIR):
+            os.makedirs(IP_DIR, mode=0o755)
+            print(f"✅ 已创建ip目录：{IP_DIR}")
         
-        with open(f"ip/{province}_ip.txt", 'w', encoding='utf-8') as f:
+        # 保存有效IP到仓库根目录/ip/下
+        ip_save_path = os.path.join(IP_DIR, f"{province}_ip.txt")
+        with open(ip_save_path, 'w', encoding='utf-8') as f:
             f.write('\n'.join(all_ip_ports))
+        print(f"✅ 有效IP已保存到：{ip_save_path}")
         
-        if os.path.exists(f"ip/存档_{province}_ip.txt"):
-            with open(f"ip/存档_{province}_ip.txt", 'r', encoding='utf-8') as f:
+        # 存档文件路径适配
+        ip_archive_path = os.path.join(IP_DIR, f"存档_{province}_ip.txt")
+        if os.path.exists(ip_archive_path):
+            with open(ip_archive_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             for ip_port in all_ip_ports:
                 ip, port = ip_port.split(":")
                 a, b, c, d = ip.split(".")
                 lines.append(f"{a}.{b}.{c}.1:{port}\n")
             lines = sorted(set(lines))
-            with open(f"ip/存档_{province}_ip.txt", 'w', encoding='utf-8') as f:
+            with open(ip_archive_path, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
+            print(f"✅ 存档文件已更新：{ip_archive_path}")
         
-        template_file = os.path.join('template', f"template_{province}.txt")
+        # 模板文件路径适配（仓库根目录/template/下）
+        template_file = os.path.join(TEMPLATE_DIR, f"template_{province}.txt")
         if os.path.exists(template_file):
             with open(template_file, 'r', encoding='utf-8') as f:
                 tem_channels = f.read()
             output = [] 
-            with open(f"ip/{province}_ip.txt", 'r', encoding='utf-8') as f:
+            with open(ip_save_path, 'r', encoding='utf-8') as f:
                 for line in f:
                     ip = line.strip()
                     output.append(tem_channels.replace("ipipip", f"{ip}"))
-            with open(f"组播_{province}.txt", 'w', encoding='utf-8') as f:
+            # 组播文件保存到仓库根目录
+            multicast_file = os.path.join(BASE_DIR, f"组播_{province}.txt")
+            with open(multicast_file, 'w', encoding='utf-8') as f:
                 f.writelines(output)
+            print(f"✅ 省份组播文件已生成：{multicast_file}")
         else:
-            print(f"缺少模板文件: {template_file}")
+            print(f"⚠️  缺少模板文件，路径：{template_file}（请放到{TEMPLATE_DIR}目录下）")
     else:
         print(f"\n{province} 扫描完成，未扫描到有效ip_port")
 
-def txt_to_m3u(input_file, output_file):
-    with open(input_file, 'r', encoding='utf-8') as f:
-        lines = f.readlines()
-    with open(output_file, 'w', encoding='utf-8') as f:
-        genre = ''
-        for line in lines:
-            line = line.strip()
-            if "," in line:
-                channel_name, channel_url = line.split(',', 1)
-                if channel_url == '#genre#':
-                    genre = channel_name
-                else:
-                    f.write(f'#EXTINF:-1 group-title="{genre}",{channel_name}\n')
-                    f.write(f'{channel_url}\n')
-
 def main():
-    for dir_name in ['ip', 'template']:
+    # 基于仓库根目录创建ip/template子目录，自动适配权限
+    for dir_name in [IP_DIR, TEMPLATE_DIR]:
         if not os.path.exists(dir_name):
             os.makedirs(dir_name, mode=0o755)
+            print(f"✅ 初始化创建目录：{dir_name}")
     
-    config_files = glob.glob(os.path.join('ip', '*_config.txt'))
+    # 扫描ip目录下的配置文件（仓库根目录/ip/*_config.txt）
+    config_files = glob.glob(os.path.join(IP_DIR, '*_config.txt'))
     if not config_files:
-        print("⚠️  未找到ip目录下的*_config.txt配置文件")
+        print(f"⚠️  未找到配置文件！请将*_config.txt放到{IP_DIR}目录下")
         return
+    print(f"✅ 找到{len(config_files)}个配置文件，开始批量扫描...\n")
     
-    # 核心修改3：扫描每个配置文件前，强制等待1秒，确保所有资源清理完毕
+    # 扫描每个配置文件前，强制等待1秒，确保所有资源清理完毕
     for config_file in config_files:
         time.sleep(1)  # 防止资源未释放
         multicast_province(config_file)
-    
-    file_contents = []
-    for file_path in glob.glob('组播_*电信.txt') + glob.glob('组播_*联通.txt'):
-        if os.path.exists(file_path):
-            with open(file_path, 'r', encoding="utf-8") as f:
-                file_contents.append(f.read())
-    
-    now = datetime.datetime.now()
-    current_time = now.strftime("%Y/%m/%d %H:%M")
-    with open("zubo_all.txt", "w", encoding="utf-8") as f:
-        f.write(f"{current_time}更新,#genre#\n")
-        f.write(f"浙江卫视,http://ali-m-l.cztv.com/channels/lantian/channel001/1080p.m3u8\n")
-        f.write('\n'.join(file_contents))
-    
-    txt_to_m3u("zubo_all.txt", "zubo_all.m3u")
-    print(f"\n🎉 组播地址获取完成，最终文件：zubo_all.txt / zubo_all.m3u")
+
+    # 扫描完成最终提示（无总文件生成）
+    print(f"\n🎉 所有省份组播IP扫描完成！")
+    print(f"📁 有效IP文件：{IP_DIR}/*_ip.txt")
+    print(f"📁 省份组播文件：{BASE_DIR}/组播_*.txt")
 
 if __name__ == "__main__":
+    # 禁用requests的HTTPS警告，适配所有环境
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+    # 启动主程序
     main()
