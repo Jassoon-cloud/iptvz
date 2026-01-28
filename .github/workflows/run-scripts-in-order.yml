@@ -1,24 +1,84 @@
-name: 一键联动运行 HB.py → 断流检测 → PX.py
+# 工作流名称：下载FFmpeg + 依次运行 HB → DL → PX 脚本
+name: 下载FFmpeg + 一键联动 HB/DL/PX
+# 触发方式：手动在GitHub Actions页面点击运行
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:
 
 jobs:
-  run-scripts:
+  run-scripts-sequentially:
     runs-on: ubuntu-latest
     steps:
-      - name: 克隆仓库到云端
+      # 步骤1：克隆仓库到云端环境（仓库根目录：/home/runner/work/iptvz/iptvz/）
+      - name: 克隆iptvz仓库到云端
         uses: actions/checkout@v4
 
+      # 步骤2：配置Python 3.11环境（和脚本兼容，缓存提速）
       - name: 配置Python环境
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
-      - name: 第一步：运行HB.py，生成HB.txt
-        run: python HB.py
+      # 步骤3：从Release下载FFmpeg压缩包并解压到仓库根目录
+      - name: 从Release下载并解压FFmpeg
+        env:
+          # ========== 需手动修改！！！==========
+          RELEASE_TAG: "ffmpeg-20260128"  # 你的Release标签名（比如ffmpeg-static/v1.0）
+          FFMPEG_FILE: "ffmpeg-master-latest-linux64-lgpl.tar.xz"  # Release中的FFmpeg压缩包文件名
+          # ====================================
+          REPO_URL: ${{ github.repository }}  # 自动获取你的仓库地址（无需修改）
+        run: |
+          echo "====================================="
+          echo "🚀 开始从Release下载FFmpeg：$FFMPEG_FILE"
+          echo "====================================="
+          # 下载命令：从GitHub Release下载压缩包到仓库根目录
+          wget --no-verbose -O $FFMPEG_FILE https://github.com/$REPO_URL/releases/download/$RELEASE_TAG/$FFMPEG_FILE
+          
+          echo "✅ FFmpeg下载完成，开始解压到仓库根目录..."
+          # 适配tar.gz格式（推荐），如果用zip则替换为：unzip -q $FFMPEG_FILE -d .
+          tar -zxf $FFMPEG_FILE -C .
+          
+          # 验证解压结果：检查是否生成ffmpeg/bin/ffprobe
+          if [ -f "./ffmpeg/bin/ffprobe" ] && [ -f "./ffmpeg/bin/ffmpeg" ]; then
+            echo "✅ FFmpeg解压成功，路径：./ffmpeg/"
+          else
+            echo "❌ FFmpeg解压失败，未找到./ffmpeg/bin/ffprobe"
+            exit 1  # 解压失败，终止后续步骤
+          fi
 
-      - name: 第二步：运行断流检测脚本，生成DL.txt
-        run: python 你的断流检测脚本名.py  # 替换为你实际的脚本文件名
+      # 步骤4：给FFmpeg/ffprobe添加可执行权限（关键，避免DL.py运行报错）
+      - name: 给ffmpeg/ffprobe添加可执行权限
+        run: |
+          chmod -R +x ./ffmpeg/bin/
+          echo "✅ 已给ffmpeg/ffprobe添加可执行权限"
+          # 验证权限
+          if [ -x "./ffmpeg/bin/ffprobe" ]; then
+            echo "✅ ffprobe权限验证通过"
+          else
+            echo "❌ ffprobe添加权限失败"
+            exit 1
+          fi
 
-      - name: 第三步：运行PX.py，读取DL.txt
-        run: python PX.py
+      # 步骤5：运行HB.py，生成HB.txt（仓库根目录）
+      - name: 第一步运行 HB.py
+        run: |
+          echo "====================================="
+          echo "🚀 开始运行 HB.py，生成 HB.txt"
+          echo "====================================="
+          python HB.py
+
+      # 步骤6：运行DL.py（断流检测），读取HB.txt生成DL.txt
+      - name: 第二步运行 DL.py
+        run: |
+          echo "====================================="
+          echo "🚀 开始运行 DL.py，读取 HB.txt 生成 DL.txt"
+          echo "====================================="
+          python DL.py
+
+      # 步骤7：运行PX.py，读取DL.txt完成后续处理
+      - name: 第三步运行 PX.py
+        run: |
+          echo "====================================="
+          echo "🚀 开始运行 PX.py，读取 DL.txt 执行后续逻辑"
+          echo "====================================="
+          python PX.py
