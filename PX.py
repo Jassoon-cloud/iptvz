@@ -14,7 +14,7 @@ def parse_channel_name(channel):
         number = int(match.group(2))  # 提取数字部分
         suffix = match.group(3)  # 提取后缀部分
 
-        # CCTV频道优先级字典（完全保留你的数值）
+        # CCTV频道优先级字典（完全保留原有数值）
         priority_map = {
             1: 1,   # CCTV1
             2: 2,   # CCTV2
@@ -34,14 +34,14 @@ def parse_channel_name(channel):
             16: 16, # CCTV16
         }
         
-        # 获取优先级（完全保留你的逻辑）
+        # 获取优先级（完全保留原有逻辑）
         priority = priority_map.get(number, 20 + number)
         if number == 5 and '+' in suffix:
             priority = 6  # CCTV5+ 排在CCTV5(5)之后、CCTV6(6)之前
         
         return (priority, number, suffix)
 
-    # 处理非CCTV频道的优先级（完全保留你的逻辑）
+    # 处理非CCTV频道的优先级（完全保留原有逻辑）
     channel_name = channel_name.strip()
     if '湖南卫视' in channel_name:
         return (20, 0, channel)
@@ -164,83 +164,101 @@ def classify_and_sort_channels(channels):
     return final_result
 
 def main():
-    # ========== 核心修改：指定/root/iptv绝对路径 ==========
-    # 固定脚本运行的根目录（/root/iptv）
-    base_dir = "./iptv"
-    # 输入文件：./iptv/GG.txt
-    input_file = os.path.join(base_dir, "GG.txt")
-    # 输出文件：./iptv/TV.txt
-    output_file = os.path.join(base_dir, "TV.txt")
+    # ========== 核心修改：适配仓库根目录iptvz，分离输入/输出目录 ==========
+    # 自动获取脚本所在的仓库根目录（iptvz），无需手动修改
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # 输出目录：仓库根目录下的iptv文件夹（存放最终的TV.txt）
+    OUTPUT_DIR = os.path.join(BASE_DIR, "iptv")
+    # 输入文件：仓库根目录下的GG.txt（和脚本同目录）
+    INPUT_FILE = os.path.join(BASE_DIR, "GG.txt")
+    # 输出文件：仓库根目录/iptv/TV.txt（输出到专属文件夹，不污染根目录）
+    OUTPUT_FILE = os.path.join(OUTPUT_DIR, "TV.txt")
+    # Linux文件权限设置（和HB.py保持一致）
+    FILE_MODE = 0o644
+    DIR_MODE = 0o755
 
-    # Linux下确保目录存在（防止/root/iptv被误删）
-    if not os.path.exists(base_dir):
-        os.makedirs(base_dir, mode=0o755)
-        print(f"⚠️  目录 {base_dir} 不存在，已自动创建")
+    # 确保输出目录存在（仓库根目录/iptv），普通用户可创建
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR, mode=DIR_MODE)
+        print(f"⚠️  输出目录 {OUTPUT_DIR} 不存在，已自动创建")
 
-    # 读取输入文件（Linux下强制UTF-8编码，添加权限/编码容错）
+    # 读取输入文件（仓库根目录的GG.txt，兼容UTF-8/GBK，完善容错提示）
     try:
-        with open(input_file, 'r', encoding='utf-8') as f:
+        with open(INPUT_FILE, 'r', encoding='utf-8') as f:
+            # 读取并过滤空行（保留原有逻辑）
             channels = [line.strip() for line in f.readlines()]
+        print(f"✅ 成功读取输入文件：{INPUT_FILE}（UTF-8编码）")
     except FileNotFoundError:
-        print(f"❌ 错误：未找到输入文件 → {input_file}")
-        print(f"   请确保GG.txt文件放在 {base_dir} 目录下！")
+        print(f"❌ 错误：未找到输入文件 → {INPUT_FILE}")
+        print(f"   请确保GG.txt文件放在【仓库根目录iptvz】下（和本脚本同目录）！")
         return
     except UnicodeDecodeError:
-        # 兼容GBK编码（Windows传过来的文件常见）
+        # 兼容GBK编码（Windows上传文件常见，自动转换处理）
         try:
-            with open(input_file, 'r', encoding='gbk') as f:
+            with open(INPUT_FILE, 'r', encoding='gbk') as f:
                 channels = [line.strip() for line in f.readlines()]
-            print(f"⚠️  文件 {input_file} 是GBK编码，已自动转换为UTF-8处理")
+            print(f"⚠️  输入文件 {INPUT_FILE} 为GBK编码，已自动转换为UTF-8处理")
         except Exception as e:
             print(f"❌ 读取文件失败（编码不兼容）：{str(e)}")
+            print(f"   建议将GG.txt转换为UTF-8编码后重新上传！")
             return
     except PermissionError:
-        print(f"❌ 错误：没有读取 {input_file} 的权限！")
-        print(f"   请执行：chmod 644 {input_file}")
+        print(f"❌ 错误：读取 {INPUT_FILE} 权限不足！")
+        print(f"   解决方案：在仓库/服务器执行 → chmod {oct(FILE_MODE)[2:]} {INPUT_FILE}")
         return
     except Exception as e:
         print(f"❌ 读取输入文件失败：{str(e)}")
         return
 
-    # 过滤无效行（空行、N/A,N/A）
+    # 过滤无效行（空行、N/A,N/A），保留原有逻辑
+    original_count = len(channels)
     channels = [channel for channel in channels if channel and channel != "N/A,N/A"]
+    filter_count = original_count - len(channels)
+    if filter_count > 0:
+        print(f"ℹ️  已过滤无效行（空行/N/A,N/A）：{filter_count} 行")
 
+    # 检查是否有有效频道数据
     if not channels:
-        print(f"⚠️  输入文件 {input_file} 中无有效频道数据")
+        print(f"❌ 错误：输入文件 {INPUT_FILE} 中无有效频道数据！")
         return
 
-    # 分类并排序频道
+    # 核心逻辑：分类并排序频道（完全保留原有排序规则，不做任何修改）
+    print(f"🚀 开始对 {len(channels)} 条频道数据进行分类排序...")
     final_channels = classify_and_sort_channels(channels)
 
-    # 将结果写入输出文件（Linux下设置权限，避免写入失败）
+    # 将排序结果写入输出文件（设置权限，适配普通用户）
     try:
-        with open(output_file, 'w', encoding='utf-8') as f:
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
             for line in final_channels:
                 f.write(line + '\n')
-        # Linux下设置文件权限（方便后续读取）
-        os.chmod(output_file, 0o644)
+        # 设置输出文件权限，方便后续读取/使用
+        os.chmod(OUTPUT_FILE, FILE_MODE)
         
-        print(f"✅ 分类排序完成！")
-        print(f"📥 输入文件：{input_file}")
-        print(f"📤 输出文件：{output_file}")
-        
-        # 统计输出
+        # 打印成功结果+详细统计（保留原有统计，优化提示格式）
+        print(f"✅ 频道分类排序完成！")
+        print(f"=" * 50)
+        print(f"📥 输入文件：{INPUT_FILE}（有效数据：{len(channels)} 条）")
+        print(f"📤 输出文件：{OUTPUT_FILE}（最终数据：{len(final_channels)} 行）")
+        print(f"=" * 50)
+        print(f"📊 链接类型统计：")
         gaoma_count = len([c for c in channels if "gaoma" in c.split(",")[-1].lower()])
         php_count = len([c for c in channels if "php" in c.split(",")[-1].lower() and "gaoma" not in c.split(",")[-1].lower()])
         udp_rtp_count = len([c for c in channels if any(k in c.split(",")[-1].lower() for k in ["udp", "rtp"]) and not any(k in c.split(",")[-1].lower() for k in ["gaoma", "php"])])
+        print(f"   🔴 Gaoma链接：{gaoma_count} 个")
+        print(f"   🟡 PHP链接：{php_count} 个")
+        print(f"   🟢 UDP/RTP链接：{udp_rtp_count} 个")
+        print(f"=" * 50)
+        print(f"📺 频道分类统计：")
         cctv_count = len([c for c in channels if 'CCTV' in c.split(',')[0]])
         satellite_count = len([c for c in channels if '卫视' in c.split(',')[0]])
         other_count = len(channels) - cctv_count - satellite_count
-        print(f"📊 统计：")
-        print(f"   🔴 含Gaoma的链接数：{gaoma_count} 个")
-        print(f"   🟡 含PHP的链接数：{php_count} 个")
-        print(f"   🟢 含UDP/RTP的链接数：{udp_rtp_count} 个")
-        print(f"   📺 央视频道（CCTV）：{cctv_count} 个")
+        print(f"   📺 央视频道：{cctv_count} 个")
         print(f"   📡 卫视频道：{satellite_count} 个")
         print(f"   🎬 其他频道：{other_count} 个")
+        print(f"=" * 50)
     except PermissionError:
-        print(f"❌ 错误：没有写入 {output_file} 的权限！")
-        print(f"   请执行：chmod 755 {base_dir}")
+        print(f"❌ 错误：写入 {OUTPUT_FILE} 权限不足！")
+        print(f"   解决方案：执行 → chmod {oct(DIR_MODE)[2:]} {OUTPUT_DIR}")
         return
     except Exception as e:
         print(f"❌ 写入输出文件失败：{str(e)}")
